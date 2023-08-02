@@ -1,0 +1,1 @@
+Lapce plugin for checking crates.io for updates.

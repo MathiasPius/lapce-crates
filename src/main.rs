@@ -7,7 +7,10 @@
 use anyhow::Result;
 use lapce_plugin::{
     psp_types::{
-        lsp_types::{request::Initialize, DocumentFilter, DocumentSelector, InitializeParams, Url, MessageType},
+        lsp_types::{
+            request::Initialize, DocumentFilter, DocumentSelector, InitializeParams, MessageType,
+            Url,
+        },
         Request,
     },
     register_plugin, LapcePlugin, VoltEnvironment, PLUGIN_RPC,
@@ -20,11 +23,15 @@ struct State {}
 register_plugin!(State);
 
 fn initialize(params: InitializeParams) -> Result<()> {
+    PLUGIN_RPC
+        .window_log_message(MessageType::ERROR, "CRATES: Hello1".to_string())
+        .unwrap();
+
     let document_selector: DocumentSelector = vec![DocumentFilter {
         // lsp language id
-        language: Some(String::from("language_id")),
+        language: Some(String::from("toml")),
         // glob pattern
-        pattern: Some(String::from("**/*.{ext1,ext2}")),
+        pattern: Some(String::from("**/Cargo.toml")),
         // like file:
         scheme: None,
     }];
@@ -55,7 +62,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
                 if let Some(server_path) = server_path.as_str() {
                     if !server_path.is_empty() {
                         let server_uri = Url::parse(&format!("urn:{}", server_path))?;
-                        PLUGIN_RPC.start_lsp(
+                        let _ = PLUGIN_RPC.start_lsp(
                             server_uri,
                             server_args,
                             document_selector,
@@ -96,11 +103,12 @@ fn initialize(params: InitializeParams) -> Result<()> {
     };
 
     // Plugin working directory
-    let volt_uri = VoltEnvironment::uri()?;
-    let server_uri = Url::parse(&volt_uri)?.join("[filename]")?;
+    // let volt_uri = VoltEnvironment::uri()?;
+    //let server_uri = Url::parse(&volt_uri)?.join("[filename]")?;
 
     // if you want to use server from PATH
-    // let server_uri = Url::parse(&format!("urn:{filename}"))?;
+    let filename = "/home/mpd/Projects/crates-lsp/target/debug/crates-lsp";
+    let server_uri = Url::parse(&format!("urn:{filename}"))?;
 
     // Available language IDs
     // https://github.com/lapce/lapce/blob/HEAD/lapce-proxy/src/buffer.rs#L173
@@ -109,19 +117,26 @@ fn initialize(params: InitializeParams) -> Result<()> {
         server_args,
         document_selector,
         params.initialization_options,
-    );
+    )?;
 
     Ok(())
 }
 
 impl LapcePlugin for State {
     fn handle_request(&mut self, _id: u64, method: String, params: Value) {
+        PLUGIN_RPC
+            .window_log_message(MessageType::ERROR, "CRATES: Hello".to_string())
+            .unwrap();
+
         #[allow(clippy::single_match)]
         match method.as_str() {
             Initialize::METHOD => {
                 let params: InitializeParams = serde_json::from_value(params).unwrap();
                 if let Err(e) = initialize(params) {
-                    PLUGIN_RPC.window_show_message(MessageType::ERROR, format!("plugin returned with error: {e}"))
+                    let _ = PLUGIN_RPC.window_log_message(
+                        MessageType::ERROR,
+                        format!("CRATES: plugin returned with error: {e}"),
+                    );
                 }
             }
             _ => {}
