@@ -1,16 +1,11 @@
 [package]
 edition = "2021"
 name = "lapce-crates"
-version = "0.0.0"
+version = "0.0.1"
 resolver = "2"
 
 [target.'cfg(target_os = "wasi")'.dependencies]
-# plugin deps
-
-# for unpacking zip
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
-
-# for unpacking tar/gz
 flate2 = { version = "1.0" }
 
 # default deps for all lapce plugins

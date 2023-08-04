@@ -4,12 +4,9 @@
 #![deny(clippy::print_stdout)]
 #![deny(clippy::print_stderr)]
 
-mod os;
+//mod os;
 
-use std::{io::Cursor, path::PathBuf, str::FromStr};
-
-use anyhow::Result;
-use flate2::read::GzDecoder;
+use anyhow::{anyhow, Result};
 use lapce_plugin::{
     psp_types::{
         lsp_types::{
@@ -18,18 +15,16 @@ use lapce_plugin::{
         },
         Request,
     },
-    register_plugin, Http, LapcePlugin, VoltEnvironment, PLUGIN_RPC,
+    register_plugin, LapcePlugin, PLUGIN_RPC,
 };
-use os::{Arch, OperatingSystem};
 use serde_json::Value;
-use zip::ZipArchive;
 
 #[derive(Default)]
 struct State {}
 
 register_plugin!(State);
 
-const LSP_VERSION: &str = "0.0.1";
+//const LSP_VERSION: &str = "0.0.1";
 
 fn initialize(params: InitializeParams) -> Result<()> {
     PLUGIN_RPC
@@ -38,14 +33,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
             "Initializing lapce-crates plugin".to_string(),
         )
         .unwrap();
-    
 
-    // Check for user specified LSP server path
-    // ```
-    // [lapce-plugin-name.lsp]
-    // serverPath = "[path or filename]"
-    // serverArgs = ["--arg1", "--arg2"]
-    // ```
     /*
     if let Some(options) = params.initialization_options.as_ref() {
         if let Some(lsp) = options.get("lsp") {
@@ -80,6 +68,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
     }
     */
 
+    /*
     let arch = Arch::from_str(&VoltEnvironment::architecture()?)?;
     let os = OperatingSystem::from_str(&VoltEnvironment::operating_system()?)?;
 
@@ -102,7 +91,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
     )?;
     let mut resp = Http::get(&uri)?;
     let body = resp.body_read_all()?;
-    
+
         PLUGIN_RPC.window_log_message(
             MessageType::INFO,
             format!("PATH: {:#?}", std::env::current_dir()),
@@ -115,7 +104,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
             MessageType::INFO,
             format!("Unpacking"),
         )?;
-    
+
     // Extract the contained executable.
     match os.archive_format() {
         os::ArchiveFormat::Zip => {
@@ -129,13 +118,25 @@ fn initialize(params: InitializeParams) -> Result<()> {
         }
     }
 
-    let server_uri = Url::parse(&volt_uri)?.join(os.executable())?;
 
-    /*
-    // if you want to use server from PATH
-    let filename = "crates-lsp";
-    let server_uri = Url::parse(&format!("urn:{filename}"))?;
+    let server_uri = Url::parse(&volt_uri)?.join(os.executable())?;
     */
+
+    let Some(server_path) = params
+        .initialization_options
+        .as_ref()
+        .and_then(|options| options.get("lsp"))
+        .and_then(|lsp| lsp.get("serverPath"))
+    else {
+        PLUGIN_RPC.window_show_message(
+            MessageType::ERROR, 
+            "Could not load Crates plugin.Please manually install the 'crates-lsp' binary, and specify the path to it in the plugin settings. See lapce-crates plugin README for guidance.".to_string()
+        )?;
+
+        return Err(anyhow!("Could not load Crates plugin. Please manually install the 'crates-lsp' binary, and specify the path to it in the plugin settings."));
+    };
+
+    let server_uri = Url::parse(&format!("urn:{}", server_path))?;
 
     // Target Cargo.toml files specifically.
     let document_selector: DocumentSelector = vec![DocumentFilter {
@@ -143,11 +144,11 @@ fn initialize(params: InitializeParams) -> Result<()> {
         pattern: Some(String::from("**/Cargo.toml")),
         scheme: None,
     }];
-    
+
     PLUGIN_RPC.window_log_message(
-            MessageType::INFO,
-            format!("Starting server: {server_uri:#?}"),
-        )?;
+        MessageType::INFO,
+        format!("Starting server: {server_uri:#?}"),
+    )?;
 
     PLUGIN_RPC.start_lsp(
         server_uri,
