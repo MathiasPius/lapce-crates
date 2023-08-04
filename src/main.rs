@@ -127,6 +127,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
         .as_ref()
         .and_then(|options| options.get("lsp"))
         .and_then(|lsp| lsp.get("serverPath"))
+        .and_then(|server_path| server_path.as_str())
     else {
         PLUGIN_RPC.window_show_message(
             MessageType::ERROR, 
