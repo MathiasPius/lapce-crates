@@ -4,7 +4,12 @@
 #![deny(clippy::print_stdout)]
 #![deny(clippy::print_stderr)]
 
+mod os;
+
+use std::{io::Cursor, path::PathBuf, str::FromStr};
+
 use anyhow::Result;
+use flate2::read::GzDecoder;
 use lapce_plugin::{
     psp_types::{
         lsp_types::{
@@ -13,29 +18,27 @@ use lapce_plugin::{
         },
         Request,
     },
-    register_plugin, LapcePlugin, VoltEnvironment, PLUGIN_RPC,
+    register_plugin, Http, LapcePlugin, VoltEnvironment, PLUGIN_RPC,
 };
+use os::{Arch, OperatingSystem};
 use serde_json::Value;
+use zip::ZipArchive;
 
 #[derive(Default)]
 struct State {}
 
 register_plugin!(State);
 
+const LSP_VERSION: &str = "0.0.1";
+
 fn initialize(params: InitializeParams) -> Result<()> {
     PLUGIN_RPC
-        .window_log_message(MessageType::ERROR, "CRATES: Hello1".to_string())
+        .window_log_message(
+            MessageType::INFO,
+            "Initializing lapce-crates plugin".to_string(),
+        )
         .unwrap();
-
-    let document_selector: DocumentSelector = vec![DocumentFilter {
-        // lsp language id
-        language: Some(String::from("toml")),
-        // glob pattern
-        pattern: Some(String::from("**/Cargo.toml")),
-        // like file:
-        scheme: None,
-    }];
-    let mut server_args = vec![];
+    
 
     // Check for user specified LSP server path
     // ```
@@ -43,6 +46,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
     // serverPath = "[path or filename]"
     // serverArgs = ["--arg1", "--arg2"]
     // ```
+    /*
     if let Some(options) = params.initialization_options.as_ref() {
         if let Some(lsp) = options.get("lsp") {
             if let Some(args) = lsp.get("serverArgs") {
@@ -74,47 +78,80 @@ fn initialize(params: InitializeParams) -> Result<()> {
             }
         }
     }
+    */
 
-    // Architecture check
-    let _ = match VoltEnvironment::architecture().as_deref() {
-        Ok("x86_64") => "x86_64",
-        Ok("aarch64") => "aarch64",
-        _ => return Ok(()),
-    };
+    let arch = Arch::from_str(&VoltEnvironment::architecture()?)?;
+    let os = OperatingSystem::from_str(&VoltEnvironment::operating_system()?)?;
 
-    // OS check
-    let _ = match VoltEnvironment::operating_system().as_deref() {
-        Ok("macos") => "macos",
-        Ok("linux") => "linux",
-        Ok("windows") => "windows",
-        _ => return Ok(()),
-    };
+    let archive = format!(
+        "crates-lsp-{arch}-{target}.{ext}",
+        target = os.as_target(),
+        ext = os.archive_format()
+    );
 
     // Download URL
-    // let _ = format!("https://github.com/<name>/<project>/releases/download/<version>/{filename}");
+    let uri = format!(
+        "https://github.com/MathiasPius/crates-lsp/releases/download/v{LSP_VERSION}/{archive}"
+    );
 
-    // see lapce_plugin::Http for available API to download files
+    let volt_uri = VoltEnvironment::uri()?;
 
-    let _ = match VoltEnvironment::operating_system().as_deref() {
-        Ok("windows") => {
-            format!("{}.exe", "[filename]")
+    PLUGIN_RPC.window_log_message(
+        MessageType::INFO,
+        format!("downloading {uri} into {volt_uri}"),
+    )?;
+    let mut resp = Http::get(&uri)?;
+    let body = resp.body_read_all()?;
+    
+        PLUGIN_RPC.window_log_message(
+            MessageType::INFO,
+            format!("PATH: {:#?}", std::env::current_dir()),
+        )?;
+
+
+    let mut file = std::fs::File::create(PathBuf::from("/").join(os.executable()))?;
+
+    PLUGIN_RPC.window_log_message(
+            MessageType::INFO,
+            format!("Unpacking"),
+        )?;
+    
+    // Extract the contained executable.
+    match os.archive_format() {
+        os::ArchiveFormat::Zip => {
+            let mut archive = ZipArchive::new(Cursor::new(body))?;
+            let mut reader = archive.by_name(os.executable())?;
+            std::io::copy(&mut reader, &mut file)?;
         }
-        _ => "[filename]".to_string(),
-    };
+        os::ArchiveFormat::TarGz => {
+            let mut reader = GzDecoder::new(Cursor::new(body));
+            std::io::copy(&mut reader, &mut file)?;
+        }
+    }
 
-    // Plugin working directory
-    // let volt_uri = VoltEnvironment::uri()?;
-    //let server_uri = Url::parse(&volt_uri)?.join("[filename]")?;
+    let server_uri = Url::parse(&volt_uri)?.join(os.executable())?;
 
+    /*
     // if you want to use server from PATH
-    let filename = "/home/mpd/Projects/crates-lsp/target/debug/crates-lsp";
+    let filename = "crates-lsp";
     let server_uri = Url::parse(&format!("urn:{filename}"))?;
+    */
 
-    // Available language IDs
-    // https://github.com/lapce/lapce/blob/HEAD/lapce-proxy/src/buffer.rs#L173
+    // Target Cargo.toml files specifically.
+    let document_selector: DocumentSelector = vec![DocumentFilter {
+        language: Some(String::from("toml")),
+        pattern: Some(String::from("**/Cargo.toml")),
+        scheme: None,
+    }];
+    
+    PLUGIN_RPC.window_log_message(
+            MessageType::INFO,
+            format!("Starting server: {server_uri:#?}"),
+        )?;
+
     PLUGIN_RPC.start_lsp(
         server_uri,
-        server_args,
+        Vec::new(),
         document_selector,
         params.initialization_options,
     )?;
@@ -124,14 +161,16 @@ fn initialize(params: InitializeParams) -> Result<()> {
 
 impl LapcePlugin for State {
     fn handle_request(&mut self, _id: u64, method: String, params: Value) {
-        PLUGIN_RPC
-            .window_log_message(MessageType::ERROR, "CRATES: Hello".to_string())
-            .unwrap();
-
         #[allow(clippy::single_match)]
         match method.as_str() {
             Initialize::METHOD => {
+                let _ = PLUGIN_RPC.window_log_message(
+                    MessageType::ERROR,
+                    format!("CRATES: initialized with {params}"),
+                );
+
                 let params: InitializeParams = serde_json::from_value(params).unwrap();
+
                 if let Err(e) = initialize(params) {
                     let _ = PLUGIN_RPC.window_log_message(
                         MessageType::ERROR,
