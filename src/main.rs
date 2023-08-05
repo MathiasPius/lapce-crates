@@ -4,9 +4,12 @@
 #![deny(clippy::print_stdout)]
 #![deny(clippy::print_stderr)]
 
-//mod os;
+mod os;
+
+use std::{io::Cursor, path::PathBuf, str::FromStr};
 
 use anyhow::{anyhow, Result};
+use flate2::bufread::GzDecoder;
 use lapce_plugin::{
     psp_types::{
         lsp_types::{
@@ -15,60 +18,21 @@ use lapce_plugin::{
         },
         Request,
     },
-    register_plugin, LapcePlugin, PLUGIN_RPC,
+    register_plugin, Http, LapcePlugin, VoltEnvironment, PLUGIN_RPC,
 };
+use os::{Arch, OperatingSystem};
 use serde_json::Value;
+use tar::Archive;
+use zip::ZipArchive;
 
 #[derive(Default)]
 struct State {}
 
 register_plugin!(State);
 
-//const LSP_VERSION: &str = "0.0.1";
+const LSP_VERSION: &str = "0.0.1";
 
-fn initialize(params: InitializeParams) -> Result<()> {
-    PLUGIN_RPC
-        .window_log_message(
-            MessageType::INFO,
-            "Initializing lapce-crates plugin".to_string(),
-        )
-        .unwrap();
-
-    /*
-    if let Some(options) = params.initialization_options.as_ref() {
-        if let Some(lsp) = options.get("lsp") {
-            if let Some(args) = lsp.get("serverArgs") {
-                if let Some(args) = args.as_array() {
-                    if !args.is_empty() {
-                        server_args = vec![];
-                    }
-                    for arg in args {
-                        if let Some(arg) = arg.as_str() {
-                            server_args.push(arg.to_string());
-                        }
-                    }
-                }
-            }
-
-            if let Some(server_path) = lsp.get("serverPath") {
-                if let Some(server_path) = server_path.as_str() {
-                    if !server_path.is_empty() {
-                        let server_uri = Url::parse(&format!("urn:{}", server_path))?;
-                        let _ = PLUGIN_RPC.start_lsp(
-                            server_uri,
-                            server_args,
-                            document_selector,
-                            params.initialization_options,
-                        );
-                        return Ok(());
-                    }
-                }
-            }
-        }
-    }
-    */
-
-    /*
+fn download_crates_lsp() -> Result<Url> {
     let arch = Arch::from_str(&VoltEnvironment::architecture()?)?;
     let os = OperatingSystem::from_str(&VoltEnvironment::operating_system()?)?;
 
@@ -92,18 +56,14 @@ fn initialize(params: InitializeParams) -> Result<()> {
     let mut resp = Http::get(&uri)?;
     let body = resp.body_read_all()?;
 
-        PLUGIN_RPC.window_log_message(
-            MessageType::INFO,
-            format!("PATH: {:#?}", std::env::current_dir()),
-        )?;
-
+    PLUGIN_RPC.window_log_message(
+        MessageType::INFO,
+        format!("PATH: {:#?}", std::env::current_dir()),
+    )?;
 
     let mut file = std::fs::File::create(PathBuf::from("/").join(os.executable()))?;
 
-    PLUGIN_RPC.window_log_message(
-            MessageType::INFO,
-            format!("Unpacking"),
-        )?;
+    PLUGIN_RPC.window_log_message(MessageType::INFO, "Unpacking".to_string())?;
 
     // Extract the contained executable.
     match os.archive_format() {
@@ -113,31 +73,48 @@ fn initialize(params: InitializeParams) -> Result<()> {
             std::io::copy(&mut reader, &mut file)?;
         }
         os::ArchiveFormat::TarGz => {
-            let mut reader = GzDecoder::new(Cursor::new(body));
+            let mut archive = Archive::new(GzDecoder::new(Cursor::new(body)));
+            let mut reader = archive.entries()?.next().unwrap()?;
             std::io::copy(&mut reader, &mut file)?;
         }
     }
 
+    Ok(Url::parse(&volt_uri)?.join(os.executable())?)
+}
 
-    let server_uri = Url::parse(&volt_uri)?.join(os.executable())?;
+fn initialize(params: InitializeParams) -> Result<()> {
+    PLUGIN_RPC
+        .window_log_message(
+            MessageType::INFO,
+            "Initializing lapce-crates plugin".to_string(),
+        )
+        .unwrap();
+
+    /*
+
     */
 
-    let Some(server_path) = params
+    let server_uri = if let Some(server_path) = params
         .initialization_options
         .as_ref()
         .and_then(|options| options.get("lsp"))
         .and_then(|lsp| lsp.get("serverPath"))
         .and_then(|server_path| server_path.as_str())
-    else {
+        .filter(|server_path| !server_path.is_empty())
+    {
+        Url::parse(&format!("urn:{}", server_path))?
+    } else {
+        /*
         PLUGIN_RPC.window_show_message(
-            MessageType::ERROR, 
+            MessageType::INFO,
             "Could not load Crates plugin.Please manually install the 'crates-lsp' binary, and specify the path to it in the plugin settings. See lapce-crates plugin README for guidance.".to_string()
         )?;
+        */
 
-        return Err(anyhow!("Could not load Crates plugin. Please manually install the 'crates-lsp' binary, and specify the path to it in the plugin settings."));
+        download_crates_lsp()?
+
+        //return Err(anyhow!("Could not load Crates plugin. Please manually install the 'crates-lsp' binary, and specify the path to it in the plugin settings."));
     };
-
-    let server_uri = Url::parse(&format!("urn:{}", server_path))?;
 
     // Target Cargo.toml files specifically.
     let document_selector: DocumentSelector = vec![DocumentFilter {
