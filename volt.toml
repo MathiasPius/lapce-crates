@@ -14,4 +14,4 @@ workspace-contains = ["**/Cargo.toml"]
 
 [config."lsp.serverPath"]
 default = ""
-description = "Path to custom 'crates-lsp' executable. If you have not yet installed crates-lsp, go to https://github.com/MathiasPius/crates-lsp and follow the installation instructions."
+description = "Version of crates-lsp to use, or path to local crates-lsp binary. Defaults to 'latest'."
