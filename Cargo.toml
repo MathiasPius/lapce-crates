@@ -8,6 +8,7 @@ resolver = "2"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 flate2 = { version = "1.0" }
 tar = "0.4"
+semver = "1"
 
 # default deps for all lapce plugins
 anyhow = "1.0"

@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use std::{fmt::Display, str::FromStr};
 
+#[derive(Debug, Clone, Copy)]
 pub enum OperatingSystem {
     Windows,
     MacOS,
@@ -37,15 +38,15 @@ impl OperatingSystem {
         }
     }
 
-    pub fn executable(&self) -> &'static str {
+    pub fn extension(&self) -> &'static str {
         match self {
-            OperatingSystem::Windows => "crates-lsp.exe",
-            OperatingSystem::MacOS => "crates-lsp",
-            OperatingSystem::Linux => "crates-lsp",
+            OperatingSystem::Windows => ".exe",
+            OperatingSystem::MacOS | OperatingSystem::Linux => "",
         }
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum ArchiveFormat {
     Zip,
     TarGz,
@@ -60,6 +61,7 @@ impl Display for ArchiveFormat {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Arch {
     X86_64,
     Aarch64,
