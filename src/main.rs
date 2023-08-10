@@ -57,7 +57,7 @@ fn initialize(params: InitializeParams) -> Result<()> {
         scheme: None,
     }];
 
-    crate::info!("Starting server: {lsp:#?}");
+    crate::info!("Starting crates-lsp server: {lsp:?}");
 
     PLUGIN_RPC.start_lsp(
         lsp,
