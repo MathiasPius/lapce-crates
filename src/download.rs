@@ -14,7 +14,7 @@ use crate::{
     version::SelectedVersion,
 };
 
-const LATEST_VERSION: Version = Version::new(0, 0, 2);
+const LATEST_VERSION: Version = Version::new(0, 0, 3);
 
 fn download_into(
     mut file: impl Write,
