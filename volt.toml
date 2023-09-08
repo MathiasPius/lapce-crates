@@ -15,3 +15,7 @@ workspace-contains = ["**/Cargo.toml"]
 [config."lsp.serverPath"]
 default = ""
 description = "Version of crates-lsp to use, or path to local crates-lsp binary. Defaults to 'latest'."
+
+[config."lsp.useApi"]
+default = false
+description = "Whether to make use of the crates.io api instead of the sparse index at https://index.crates.io\nUsing the API is highly discouraged as it puts unnecessary strain on the crates.io infrastructure, and provides no benefit over the sparse index."
