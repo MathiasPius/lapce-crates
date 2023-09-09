@@ -1,5 +1,5 @@
 name = "lapce-crates"
-version = "0.0.3"
+version = "0.0.4"
 author = "Mathias Pius"
 display-name = "Crates"
 description = "Crates.io integration for Cargo.toml"
@@ -18,4 +18,4 @@ description = "Version of crates-lsp to use, or path to local crates-lsp binary.
 
 [config."lsp.useApi"]
 default = false
-description = "Whether to make use of the crates.io api instead of the sparse index at https://index.crates.io\nUsing the API is highly discouraged as it puts unnecessary strain on the crates.io infrastructure, and provides no benefit over the sparse index."
+description = "Use the crates.io API directly instead of the sparse index at https://index.crates.io\n\nUsing the API is highly discouraged as it puts unnecessary strain on the crates.io infrastructure, and provides no benefit over the sparse index."
