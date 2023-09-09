@@ -4,7 +4,7 @@ DEBUG_PLUGIN_DIR := "~/.local/share/lapce-debug/plugins/mathiaspius.lapce-crates
 
 build:
     cargo build
-    mkdir ./bin/
+    mkdir -p ./bin/
     cp target/wasm32-wasi/release/lapce-crates.wasm ./bin/
 
 install: build
