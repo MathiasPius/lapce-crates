@@ -4,8 +4,12 @@ DEBUG_PLUGIN_DIR := "~/.local/share/lapce-debug/plugins/mathiaspius.lapce-crates
 
 build:
     cargo build
+
+publish:
+    cargo build --release
     mkdir -p ./bin/
     cp target/wasm32-wasi/release/lapce-crates.wasm ./bin/
+    volts publish
 
 install: build
     rm -rf {{PLUGIN_DIR}}

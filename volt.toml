@@ -1,12 +1,11 @@
 name = "lapce-crates"
-version = "0.0.4"
+version = "0.0.5"
 author = "Mathias Pius"
 display-name = "Crates"
 description = "Crates.io integration for Cargo.toml"
 wasm = "bin/lapce-crates.wasm"
 icon = "logo.png"
 repository = "https://github.com/MathiasPius/lapce-crates"
-dir = "/home/mpd/.local/share/lapce-stable/plugins/mathiaspius.lapce-crates/"
 
 [activation]
 language = ["rust"]
