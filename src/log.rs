@@ -13,7 +13,7 @@ macro_rules! log {
 #[allow(unused)]
 macro_rules! error {
     ($($arg:tt)+) => {
-        crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::ERROR, $($arg)+)
+        $crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::ERROR, $($arg)+)
     };
 }
 
@@ -21,7 +21,7 @@ macro_rules! error {
 #[allow(unused)]
 macro_rules! warn {
     ($($arg:tt)+) => {
-        crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::WARN, $($arg)+)
+        $crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::WARN, $($arg)+)
     };
 }
 
@@ -29,7 +29,7 @@ macro_rules! warn {
 #[allow(unused)]
 macro_rules! debug {
     ($($arg:tt)+) => {
-        crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::DEBUG, $($arg)+)
+        $crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::DEBUG, $($arg)+)
     };
 }
 
@@ -37,6 +37,6 @@ macro_rules! debug {
 #[allow(unused)]
 macro_rules! info {
     ($($arg:tt)+) => {
-        crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::INFO, $($arg)+)
+        $crate::log!(::lapce_plugin::psp_types::lsp_types::MessageType::INFO, $($arg)+)
     };
 }

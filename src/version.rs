@@ -26,12 +26,13 @@ impl FromStr for SelectedVersion {
             return Ok(SelectedVersion::Specific(version));
         }
 
-        if let Ok(path) = PathBuf::try_from(s) {
-            crate::info!("selected version: {path:?}");
-            return Ok(SelectedVersion::Path(path));
+        let path = PathBuf::from(s);
+        if !path.exists() {
+            crate::error!("specified crates-lsp version interpreted as a path, but the path does not exist: {}", path.to_string_lossy());
+            return Err(anyhow!("specified crates-lsp version interpreted as a path, but the path does not exist: {}", path.to_string_lossy()));
         }
 
-        crate::error!("specified crates-lsp version is not valid: {s}");
-        Err(anyhow!("Specified version is not a valid version"))
+        crate::info!("selected version: {path:?}");
+        Ok(SelectedVersion::Path(path))
     }
 }
