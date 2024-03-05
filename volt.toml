@@ -1,5 +1,5 @@
 name = "lapce-crates"
-version = "0.0.6"
+version = "0.1.0"
 author = "Mathias Pius"
 display-name = "Crates"
 description = "Crates.io integration for Cargo.toml"
